@@ -1,22 +1,23 @@
-program sgemm_acc
+program saxpy_acc_mpi
+  use openacc
   use mpi
   implicit none
 
   integer :: len_global, len_local, i
-  integer :: irank, nranks, ierr, istat(MPI_STATUS_SIZE)
+  integer :: irank, nranks, igpu, ngpus, ierr, istat(MPI_STATUS_SIZE)
   real(4), allocatable, dimension(:) :: X_local, X_global, Y_global, Y_local, Y_ref
   real(4) :: a
   character(len=128) :: argv
 
   a = 2.0
-  len_global = 8
+  len_global = 1024
 
   ! Initialize MPI
   call MPI_Init(ierr)
   call MPI_Comm_rank(MPI_COMM_WORLD, irank, ierr)
   call MPI_Comm_size(MPI_COMM_WORLD, nranks, ierr)
 
-  ! Check to see that the global length is evenly divisible by the number of MPI ranks
+  ! Check to see that the global array length is evenly divisible by the number of MPI ranks
   if (mod(len_global, nranks) .ne. 0) then
     if (irank .eq. 0) then
       write(*,'(a,5i,a,5i)'), 'The global array length, ', len_global, &
@@ -25,6 +26,18 @@ program sgemm_acc
     endif
   else
     len_local = len_global / nranks
+  endif
+
+  ! Find GPU devices and set the device number
+  ngpus = acc_get_num_devices(acc_device_nvidia)
+  if (ngpus .le. 0) then
+    if (irank .eq. 0) then
+      write(*,'(a)'), 'No NVIDIA GPUs available'
+      call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
+    endif
+  else
+    igpu = mod(irank, ngpus)
+    call acc_set_device_num(igpu, acc_device_nvidia)
   endif
 
   ! Allocate local and global arrays
@@ -70,9 +83,11 @@ program sgemm_acc
   )
 
   ! Do local calculation
+!$ACC KERNELS
   do i = 1, len_local
     Y_local(i) = a*X_local(i) + Y_local(i)
   enddo
+!$ACC END KERNELS
 
   ! Gather result
   call MPI_Gather( &

@@ -1,4 +1,4 @@
-program sgemm_acc
+program saxpy_acc
   implicit none
 
   integer :: n, i, stat
