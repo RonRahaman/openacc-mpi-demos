@@ -3,3 +3,4 @@
 .swo
 .swp
 sgemm_acc
+sgemm_mpi
