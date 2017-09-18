@@ -106,11 +106,11 @@ program sgemm_acc
   if (irank .eq. 0) then
     print *, 'Ran SAXPY for n = ', len_global
     if (all(Y_ref .eq. Y_global)) then
-      print *, 'SUCCESS: Y matches Yref'
+      print *, 'SUCCESS: Y_global matches Y_ref'
     else
       print *, 'FAILURE: Y_global does not match Y_ref'
       print *, 'Y_global = ', Y_global
-      print *, 'Yref = ', Y_ref
+      print *, 'Y_ref = ', Y_ref
     endif
   endif
 
